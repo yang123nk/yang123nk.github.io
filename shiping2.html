@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频全屏自动循环播放</title>
+    <style>
+        /* 重置页面样式，确保无边距 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #000;
+            height: 100vh;
+            overflow: hidden; /* 隐藏滚动条 */
+        }
+        /* 视频强制全屏 */
+        #videoPlayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw; /* 宽度占满屏幕 */
+            height: 100vh; /* 高度占满屏幕 */
+            object-fit: cover; /* 保持视频比例，填满屏幕（不会拉伸变形） */
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <video 
+        id="videoPlayer" 
+        autoplay 
+        muted 
+        loop 
+        preload="auto"
+        playsinline
+    >
+        <!-- 重点：这里必须确保视频文件名和路径100%正确 -->
+        <source src="shiping.mp4" type="video/mp4">
+        你的浏览器不支持HTML5视频播放，请使用Chrome、Edge、Firefox等现代浏览器。
+    </video>
+
+    <script>
+        const video = document.getElementById('videoPlayer');
+
+        // 页面加载完成后强制触发播放，解决自动播放拦截问题
+        window.onload = async function() {
+            try {
+                // 强制播放（异步确保执行）
+                await video.play();
+                console.log("视频播放成功");
+            } catch (error) {
+                console.log("自动播放被拦截，点击页面任意位置播放");
+                console.error("错误信息：", error);
+            }
+        };
+
+        // 点击页面任意位置触发播放（兜底方案）
+        document.addEventListener('click', async () => {
+            if (video.paused) {
+                await video.play();
+            }
+        });
+
+        // 播放结束后强制重新播放（双重循环保障）
+        video.addEventListener('ended', () => {
+            video.currentTime = 0;
+            video.play();
+        });
+
+        // 可选：自动请求浏览器全屏（需要用户交互后才能生效）
+        document.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                video.requestFullscreen().catch(err => {
+                    console.log("全屏请求失败：", err);
+                });
+            }
+        }, { once: true }); // 只触发一次全屏请求
+    </script>
+</body>
+</html>
