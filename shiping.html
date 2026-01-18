@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地视频自动循环播放</title>
+    <style>
+        /* 页面样式，让视频占满屏幕 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        video {
+            max-width: 90vw;
+            max-height: 90vh;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 视频播放核心标签 -->
+    <video id="videoPlayer" controls autoplay muted loop preload="auto">
+        <!-- 这里的路径要注意：如果是本地服务器运行，直接写文件名即可；如果是本地打开，需要写完整路径 -->
+        <source src="shiping.mp4" type="video/mp4">
+        你的浏览器不支持HTML5视频播放，请更换现代浏览器（如Chrome、Edge、Firefox）。
+    </video>
+
+    <script>
+        // 获取视频元素
+        const video = document.getElementById('videoPlayer');
+        
+        // 确保视频播放结束后自动重新播放（双重保障，配合loop属性）
+        video.addEventListener('ended', function() {
+            this.currentTime = 0; // 重置播放进度到开头
+            this.play(); // 重新播放
+        });
+
+        // 解决部分浏览器自动播放被拦截的问题
+        document.addEventListener('click', function() {
+            if (video.paused) {
+                video.play();
+            }
+        });
+    </script>
+</body>
+</html>
