@@ -1,0 +1,76 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频全屏自动循环播放</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #000;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #videoPlayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <video 
+        id="videoPlayer" 
+        autoplay 
+        muted 
+        loop 
+        preload="auto"
+        playsinline
+    >
+        <!-- 核心修改：视频路径指向D盘video文件夹 -->
+        <source src="D:/video/shiping.mp4" type="video/mp4">
+        你的浏览器不支持HTML5视频播放，请使用Chrome、Edge、Firefox等现代浏览器。
+    </video>
+
+    <script>
+        const video = document.getElementById('videoPlayer');
+
+        window.onload = async function() {
+            try {
+                await video.play();
+                console.log("视频播放成功");
+            } catch (error) {
+                console.log("自动播放被拦截，点击页面任意位置播放");
+                console.error("错误信息：", error);
+            }
+        };
+
+        document.addEventListener('click', async () => {
+            if (video.paused) {
+                await video.play();
+            }
+        });
+
+        video.addEventListener('ended', () => {
+            video.currentTime = 0;
+            video.play();
+        });
+
+        document.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                video.requestFullscreen().catch(err => {
+                    console.log("全屏请求失败：", err);
+                });
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
