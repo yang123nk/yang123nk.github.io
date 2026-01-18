@@ -1,0 +1,793 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>投影机灯泡基础知识 - 多设备兼容版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #000;
+            overflow: hidden;
+            touch-action: manipulation; /* 禁止双击缩放，适配移动端 */
+        }
+        .ppt-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #fff;
+            padding: 20px;
+            display: none;
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 14px;
+        }
+        .slide.active {
+            display: block;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .slide-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+            text-align: center;
+        }
+        .slide-subtitle {
+            font-size: 18px;
+            color: #34495e;
+            margin: 15px 0 10px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 15px 0;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 8px;
+            text-align: left;
+            word-break: break-all; /* 文字强制换行，不溢出 */
+        }
+        th {
+            background-color: #3498db;
+            color: #fff;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        tr:nth-child(even) {
+            background-color: #ecf0f1;
+        }
+        .note {
+            font-size: 12px;
+            color: #e74c3c;
+            margin-top: 10px;
+            font-style: italic;
+            line-height: 1.5;
+        }
+        .content-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 15px 0;
+        }
+        .content-item {
+            flex: 1;
+            min-width: 240px;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+        }
+        .content-item h4 {
+            color: #2980b9;
+            margin-bottom: 8px;
+            font-size: 15px;
+            border-left: 3px solid #3498db;
+            padding-left: 8px;
+        }
+        .content-item p {
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+        /* 控制按钮（适配移动端触摸） */
+        .btn-group {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+        }
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background-color: #3498db;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:hover, .control-btn:active {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+        .slide-counter {
+            position: fixed;
+            top: 10px;
+            right: 15px;
+            color: #fff;
+            font-size: 14px;
+            background-color: rgba(0,0,0,0.6);
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+        /* 封面页样式 */
+        .cover-slide {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: #fff;
+        }
+        .cover-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            border: none;
+        }
+        .cover-subtitle {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #ecf0f1;
+        }
+        .cover-footer {
+            position: absolute;
+            bottom: 30px;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        /* 图片占位（原文档图片替换为通用图标，避免失效） */
+        .img-placeholder {
+            width: 100%;
+            height: 120px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            margin: 10px 0;
+            border: 1px dashed #bdc3c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="ppt-container">
+        <!-- 第1页：封面 -->
+        <div class="slide cover-slide active" data-index="1">
+            <div class="cover-title">投影机灯泡基础知识</div>
+            <div class="cover-subtitle">技术、规格、选型与故障排查全解析</div>
+            <div class="cover-footer">自动播放中 · 点击/滑动切换 · 空格/按钮暂停</div>
+        </div>
+
+        <!-- 第2页：目录 -->
+        <div class="slide" data-index="2">
+            <h2 class="slide-title">目录</h2>
+            <div class="content-box">
+                <div class="content-item">
+                    <h4>1. 灯泡技术类型</h4>
+                    <p>主流技术对比与市场现状</p>
+                </div>
+                <div class="content-item">
+                    <h4>2. 核心组件详解</h4>
+                    <p>灯杯、灯芯规格与选型</p>
+                </div>
+                <div class="content-item">
+                    <h4>3. 产品类型与品牌</h4>
+                    <p>特性对比与选购建议</p>
+                </div>
+                <div class="content-item">
+                    <h4>4. 关键参数说明</h4>
+                    <p>功率、电压、交直流匹配</p>
+                </div>
+                <div class="content-item">
+                    <h4>5. 故障分析与解决</h4>
+                    <p>常见问题排查指南</p>
+                </div>
+                <div class="content-item">
+                    <h4>6. 核心总结</h4>
+                    <p>选型与维护要点</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第3页：灯泡技术类型 -->
+        <div class="slide" data-index="3">
+            <h2 class="slide-title">灯泡技术类型</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>技术类型</</th>
+                        <<th>核心特性</</th>
+                        <<th>市场现状</</th>
+                    </tr>
+                    <tr>
+                        <td>金属卤素灯</td>
+                        <td>寿命短，色彩丰富</td>
+                        <td>已基本退出市场</td>
+                    </tr>
+                    <tr>
+                        <td>超高汞压灯</td>
+                        <td>寿命好，色彩丰富</td>
+                        <td>目前市场主流</td>
+                    </tr>
+                    <tr>
+                        <td>氙灯</td>
+                        <td>寿命长，色彩特好，价格高，技术不成熟</td>
+                        <td>未进入市场</td>
+                    </tr>
+                    <tr>
+                        <td>LED</td>
+                        <td>亮度太低，寿命长，技术需加强</td>
+                        <td>技术待完善</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="img-placeholder">灯泡技术类型示意图（金属卤素灯/超高汞压灯/氙灯/LED）</div>
+            <div class="note">注：超高汞压灯因综合性能优异，是当前投影机市场的主流选择</div>
+        </div>
+
+        <!-- 第4页：核心组件 - 灯杯（材料与厂家） -->
+        <div class="slide" data-index="4">
+            <h2 class="slide-title">核心组件 - 灯杯（材料与厂家）</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>材料类型</</th>
+                        <<th>生产厂家</</th>
+                        <<th>核心特性</</th>
+                        <<th>质量等级</</th>
+                    </tr>
+                    <tr>
+                        <td>高耐温玻璃</td>
+                        <td>冈本（日本）</td>
+                        <td>颜色不一，杯面光滑，白杯透明，杯身细麻点</td>
+                        <td>原装旧杯（已使用）</td>
+                    </tr>
+                    <tr>
+                        <td>微晶玻璃</td>
+                        <td>肖特（德国）</td>
+                        <td>颜色不一，杯面粗麻点，材质优良</td>
+                        <td>原装新杯（全新）</td>
+                    </tr>
+                    <tr>
+                        <td>陶瓷玻璃</td>
+                        <td>石磨（日本）</td>
+                        <td>陶黄色，耐高温最好，价格最高，杯壁光滑</td>
+                        <td>高仿代用杯</td>
+                    </tr>
+                    <tr>
+                        <td>假微晶灯杯</td>
+                        <td>永博/文昌洪/王勇（国产）</td>
+                        <td>外壁加工麻点，材质差，易裂脱膜</td>
+                        <td>普通代用杯</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="img-placeholder">不同材料灯杯实物对比图（高耐温玻璃/微晶玻璃/陶瓷玻璃/假微晶灯杯）</div>
+        </div>
+
+        <!-- 第5页：核心组件 - 灯杯（规格参数） -->
+        <div class="slide" data-index="5">
+            <h2 class="slide-title">核心组件 - 灯杯（规格参数）</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>规格维度</</th>
+                        <<th>高耐温玻璃/微晶玻璃</</th>
+                        <<th>陶瓷玻璃/假微晶灯杯</</th>
+                    </tr>
+                    <tr>
+                        <td>杯径范围</td>
+                        <td colspan="2">40*45/45*45(46*46)/46*50/48*52/50*50/50*55/55*55/60*60/60*65/65*70/70*70/78*78/R85(95*95)</td>
+                    </tr>
+                    <tr>
+                        <td>杯型设计</td>
+                        <td>LCD抛物线灯杯（反射平行光，P代表）</td>
+                        <td>DLP椭圆灯杯（反射会聚光，E代表）</td>
+                    </tr>
+                    <tr>
+                        <td>常见型号</td>
+                        <td>P23（R85）、P22.5（78*78）、P22（65*70）、P21.5（50*55）、P21（50*50）</td>
+                        <td>E21.8（55*55）、E19（45*45）、E17.5（45*50）</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="note">注：杯型需与投影机类型（LCD/DLP）严格匹配，否则影响光路效果</div>
+        </div>
+
+        <!-- 第6页：核心组件 - 灯芯 -->
+        <div class="slide" data-index="6">
+            <h2 class="slide-title">核心组件 - 灯芯</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>灯芯类型</</th>
+                        <<th>常见型号规格</</th>
+                    </tr>
+                    <tr>
+                        <td>交流原装灯芯</td>
+                        <td>VIP150/280 E20.6；VIP150/230 E20.8</td>
+                    </tr>
+                    <tr>
+                        <td>直流原装灯芯</td>
+                        <td>SHP 69/105/112；SHP114/136/137</td>
+                    </tr>
+                    <tr>
+                        <td>森莱浦</td>
+                        <td>U100/200/250/300；H200/A150/A200</td>
+                    </tr>
+                    <tr>
+                        <td>APO直流</td>
+                        <td>150/200/250；270W/300W</td>
+                    </tr>
+                    <tr>
+                        <td>MKM交流</td>
+                        <td>200W1.0/200W1.3；250W/300W</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="img-placeholder">不同类型灯芯实物图（交流原装/直流原装/森莱浦/APO直流/MKM交流）</div>
+        </div>
+
+        <!-- 第7页：灯泡产品类型 -->
+        <div class="slide" data-index="7">
+            <h2 class="slide-title">灯泡产品类型</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>产品类型</</th>
+                        <<th>核心配置</</th>
+                        <<th>关键备注</</th>
+                    </tr>
+                    <tr>
+                        <td>原封包</td>
+                        <td>厂家指定品牌+灯架+说明书+配件+包装盒（全新）</td>
+                        <td>品牌：UHP/UHE/VIP/NSH/UMPRD/HS/HSCR/NSHA/SHP</td>
+                    </tr>
+                    <tr>
+                        <td>原装带架</td>
+                        <td>厂家指定品牌+灯架+包装盒</td>
+                        <td>无说明书及配件，同原封包品牌</td>
+                    </tr>
+                    <tr>
+                        <td>原装裸灯</td>
+                        <td>厂家指定品牌灯泡（仅灯泡）</td>
+                        <td>部分国产（HS/NSHA），无灯架配件</td>
+                    </tr>
+                    <tr>
+                        <td>原厂灯</td>
+                        <td>国产替代灯泡（流水线生产）</td>
+                        <td>品牌：APO（晶赞）/UHR（华灯）/UHS（神州服联）</td>
+                    </tr>
+                    <tr>
+                        <td>换芯灯</td>
+                        <td>原装杯（旧杯/全新）+ 灯芯（原装/替代进口）</td>
+                        <td>性价比高，需关注杯体损耗</td>
+                    </tr>
+                    <tr>
+                        <td>代用灯</td>
+                        <td>替代灯杯+灯芯（原装/替代进口）</td>
+                        <td>质量参差不齐，价格实惠</td>
+                    </tr>
+                    <tr>
+                        <td>拆机灯</td>
+                        <td>已使用过的原装旧灯</td>
+                        <td>灯杯有使用痕迹，灯丝发黑，寿命短</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 第8页：主流品牌与特性 -->
+        <div class="slide" data-index="8">
+            <h2 class="slide-title">主流品牌与特性</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>厂家</</th>
+                        <<th>产地</</th>
+                        <<th>品牌</</th>
+                        <<th>交直流</</th>
+                        <<th>核心特性</</th>
+                    </tr>
+                    <tr>
+                        <td>飞利浦</td>
+                        <td>比利时</td>
+                        <td>UHP</td>
+                        <td>AC</td>
+                        <td>稳定性高，炸灯率低，低价产品抢占市场</td>
+                    </tr>
+                    <tr>
+                        <td>欧斯朗</td>
+                        <td>德国</td>
+                        <td>VIP</td>
+                        <td>AC</td>
+                        <td>稳定性高，炸灯率低，低价产品抢占市场</td>
+                    </tr>
+                    <tr>
+                        <td>毋休</td>
+                        <td>日本</td>
+                        <td>NSH/UMPRD</td>
+                        <td>DC</td>
+                        <td>价格高，适用机器减少</td>
+                    </tr>
+                    <tr>
+                        <td>毋休</td>
+                        <td>日本</td>
+                        <td>NSHA</td>
+                        <td>AC</td>
+                        <td>2008年上市，价格区间广，用量大</td>
+                    </tr>
+                    <tr>
+                        <td>松下</td>
+                        <td>日本</td>
+                        <td>HS/UHM</td>
+                        <td>AC/卤素灯</td>
+                        <td>UHM已淘汰，HS管压高，引丝粗</td>
+                    </tr>
+                    <tr>
+                        <td>凤凰</td>
+                        <td>日本</td>
+                        <td>SHP</td>
+                        <td>DC1.0（部分AC）</td>
+                        <td>启动兼容性差，多低价替代灯芯</td>
+                    </tr>
+                    <tr>
+                        <td>EYE</td>
+                        <td>日本</td>
+                        <td>HSCR</td>
+                        <td>AC</td>
+                        <td>炸灯率最高，日系机器曾大量使用</td>
+                    </tr>
+                    <tr>
+                        <td>GE</td>
+                        <td>美国</td>
+                        <td>SHL</td>
+                        <td>AC</td>
+                        <td>交流灯芯研发者，仅售SHL130W5050</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="note">备注：UHE（爱普生注册）、UHB（日立注册）需按机型匹配生产厂家，灯泡无品牌标注</div>
+        </div>
+
+        <!-- 第9页：关键参数 - 功率 -->
+        <div class="slide" data-index="9">
+            <h2 class="slide-title">关键参数 - 功率</h2>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>功率档位</</th>
+                        <<th>替代功率范围</</th>
+                    </tr>
+                    <tr>
+                        <td>第一档：100W</td>
+                        <td>100W - 132W</td>
+                    </tr>
+                    <tr>
+                        <td>第二档：150W</td>
+                        <td>130W - 180W</td>
+                    </tr>
+                    <tr>
+                        <td>第三档：200W</td>
+                        <td>130W - 230W</td>
+                    </tr>
+                    <tr>
+                        <td>第四档：250W</td>
+                        <td>231W - 270W</td>
+                    </tr>
+                    <tr>
+                        <td>第五档：270W</td>
+                        <td>250W - 280W</td>
+                    </tr>
+                    <tr>
+                        <td>第六档：300W</td>
+                        <td>280W - 330W</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="slide-subtitle">功率替代原则</div>
+            <div class="content-box">
+                <div class="content-item">
+                    <p>1. 高功率可替代小功率</p>
+                    <p>2. 200W以下：替代不超过20%</p>
+                    <p>3. 250W以上：替代不超过10%</p>
+                    <p>4. 原装灯芯：替代范围可放宽</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第10页：关键参数 - 电压与交直流 -->
+        <div class="slide" data-index="10">
+            <h2 class="slide-title">关键参数 - 电压与交直流</h2>
+            <h3 class="slide-subtitle">电压分类与替代规则</h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>电压类型</</th>
+                        <<th>识别特征</</th>
+                        <<th>替代规则</</th>
+                    </tr>
+                    <tr>
+                        <td>低压灯芯</td>
+                        <td>交流：灯管有启动气泡+触发丝；直流：主要为SHP灯</td>
+                        <td rowspan="2">低压可替代高压，高压不可替代低压（否则点不亮）</td>
+                    </tr>
+                    <tr>
+                        <td>高压灯芯</td>
+                        <td>交流：无启动气泡+无触发丝；直流：除SHP外均为高压</td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3 class="slide-subtitle" style="margin-top: 15px;">交直流区别与注意事项</h3>
+            <div class="table-wrapper">
+                <table>
+                    <tr>
+                        <<th>类型</</th>
+                        <<th>核心特征</</th>
+                        <<th>注意事项</</th>
+                    </tr>
+                    <tr>
+                        <td>交流</td>
+                        <td>两极不分，电极大小一致，接线无正负极</td>
+                        <td rowspan="2">交直流不得混用（易炸灯）；直流灯底部电极大=正极</td>
+                    </tr>
+                    <tr>
+                        <td>直流</td>
+                        <td>分正负极，底部电极大=正极，顶部小=负极</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 第11页：故障分析 - 亮度低&点不亮 -->
+        <div class="slide" data-index="11">
+            <h2 class="slide-title">常见故障分析（一）：亮度低 & 点不亮</h2>
+            <div class="content-box">
+                <div class="content-item">
+                    <h4>故障1：灯泡亮度低</h4>
+                    <p>• 机器灰尘多，影响光路透光率</p>
+                    <p>• 灯泡安装不正、未装稳</p>
+                    <p>• 调光不标准，焦点偏差</p>
+                    <p>• 光管脱膜/PBS烧焦</p>
+                    <p>• 驱动电路故障</p>
+                    <p>• 灯芯本身质量问题</p>
+                    <p style="color: #27ae60; margin-top: 10px; font-weight: 600;">解决方案：</p>
+                    <p style="color: #27ae60;">1. 深度清尘，清洁光路和防尘网</p>
+                    <p style="color: #27ae60;">2. 重新安装灯泡，确保装稳</p>
+                    <p style="color: #27ae60;">3. 标准调光，校准焦点</p>
+                    <p style="color: #27ae60;">4. 检修电路，更换损坏配件</p>
+                </div>
+                <div class="content-item">
+                    <h4>故障2：开机点不亮</h4>
+                    <p style="font-weight: 600;">指示灯不亮：</p>
+                    <p>• 电源未插好、灯泡未插牢</p>
+                    <p>• 后盖未盖好、未清零</p>
+                    <p>• 检测点未连接、面板故障（用遥控）</p>
+                    <p>• 灯泡质量问题</p>
+                    <p style="font-weight: 600; margin-top: 10px;">指示灯亮：</p>
+                    <p>• 风扇不转→风扇故障</p>
+                    <p>• 有吱吱声→点灯器未插好/故障</p>
+                    <p>• 无点灯声→接线/点灯板/主板故障</p>
+                    <p>• 无380V→点灯器/主电源故障</p>
+                    <p>• 色轮故障、灯泡质量问题</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第12页：故障分析 - 灭灯&炸灯 -->
+        <div class="slide" data-index="12">
+            <h2 class="slide-title">常见故障分析（二）：灭灯 & 炸灯</h2>
+            <div class="content-box">
+                <div class="content-item">
+                    <h4>故障3：灭灯</h4>
+                    <p style="font-weight: 600;">2分钟内灭灯：</p>
+                    <p>• 风扇故障</p>
+                    <p>• 色轮故障</p>
+                    <p>• 点灯器故障</p>
+                    <p>• 灯泡质量问题</p>
+                    <p style="font-weight: 600; margin-top: 10px;">10分钟后灭灯：</p>
+                    <p>• 散热问题（进出风口堵塞）</p>
+                    <p>• 温控电路故障</p>
+                    <p>• 色轮故障</p>
+                    <p>• 灯泡质量问题</p>
+                    <p style="color: #27ae60; margin-top: 10px; font-weight: 600;">解决方案：</p>
+                    <p style="color: #27ae60;">1. 清洁风扇和防尘网</p>
+                    <p style="color: #27ae60;">2. 调整机器摆放，避免遮挡风口</p>
+                    <p style="color: #27ae60;">3. 检修温控电路和色轮</p>
+                </div>
+                <div class="content-item">
+                    <h4>故障4：炸灯（高危）</h4>
+                    <p style="font-weight: 600; color: #e74c3c;">核心原因：</p>
+                    <p>• 换灯后未清尘，散热不足</p>
+                    <p>• 交直流混用/正负极接错</p>
+                    <p>• 功率不匹配/型号错误</p>
+                    <p>• 非法开关机</p>
+                    <p>• 点灯器故障</p>
+                    <p>• 灯泡本身质量问题</p>
+                    <p style="color: #e74c3c; margin-top: 10px; font-weight: 600;">预防措施：</p>
+                    <p style="color: #e74c3c;">1. 换灯前必须深度清尘</p>
+                    <p style="color: #e74c3c;">2. 严格匹配交直流和正负极</p>
+                    <p style="color: #e74c3c;">3. 选择匹配功率和型号的灯泡</p>
+                    <p style="color: #e74c3c;">4. 规范开关机流程</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第13页：总结 -->
+        <div class="slide" data-index="13">
+            <h2 class="slide-title">核心总结</h2>
+            <div class="content-box">
+                <div class="content-item">
+                    <h4>1. 选型核心</h4>
+                    <p>• 技术类型：优先超高汞压灯</p>
+                    <p>• 组件匹配：灯杯（LCD/DLP）、灯芯型号精准匹配</p>
+                    <p>• 参数匹配：功率、电压、交直流严格对应</p>
+                </div>
+                <div class="content-item">
+                    <h4>2. 品牌选择</h4>
+                    <p>• 稳定性优先：飞利浦/欧斯朗</p>
+                    <p>• 性价比选择：国产替代（APO/UHR等）</p>
+                    <p>• 谨慎选择：EYE（炸灯率高）、凤凰（兼容性差）</p>
+                </div>
+                <div class="content-item">
+                    <h4>3. 安装维护</h4>
+                    <p>• 安装：装正装稳，接线正确</p>
+                    <p>• 清洁：定期清尘，保证散热</p>
+                    <p>• 操作：规范开关机，避免非法操作</p>
+                    <p>• 检查：定期检查配件状态</p>
+                </div>
+                <div class="content-item">
+                    <h4>4. 故障排查逻辑</h4>
+                    <p>• 第一步：检查安装和接线</p>
+                    <p>• 第二步：检查散热系统</p>
+                    <p>• 第三步：验证参数匹配性</p>
+                    <p>• 第四步：排查硬件故障</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 控制按钮（适配移动端） -->
+    <div class="btn-group">
+        <button class="control-btn" id="prevBtn">←</button>
+        <button class="control-btn" id="autoBtn">❚❚</button>
+        <button class="control-btn" id="nextBtn">→</button>
+    </div>
+
+    <!-- 页码计数器 -->
+    <div class="slide-counter" id="counter">1/13</div>
+
+    <script>
+        // 初始化变量
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        let currentIndex = 0;
+        let autoPlayInterval;
+        let isAutoPlaying = true;
+
+        // 控制按钮元素
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const autoBtn = document.getElementById('autoBtn');
+        const counter = document.getElementById('counter');
+
+        // 更新幻灯片显示
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentIndex);
+            });
+            counter.textContent = `${currentIndex + 1}/${totalSlides}`;
+        }
+
+        // 下一页
+        function nextSlide() {
+            currentIndex = (currentIndex + 1) % totalSlides;
+            updateSlide();
+        }
+
+        // 上一页
+        function prevSlide() {
+            currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+            updateSlide();
+        }
+
+        // 切换自动播放状态
+        function toggleAutoPlay() {
+            isAutoPlaying = !isAutoPlaying;
+            autoBtn.textContent = isAutoPlaying ? '❚❚' : '▶';
+            isAutoPlaying ? startAutoPlay() : clearInterval(autoPlayInterval);
+        }
+
+        // 启动自动播放（10秒切换，适配阅读）
+        function startAutoPlay() {
+            clearInterval(autoPlayInterval);
+            autoPlayInterval = setInterval(nextSlide, 10000);
+        }
+
+        // 事件监听（适配PC+移动端）
+        prevBtn.addEventListener('click', prevSlide);
+        nextBtn.addEventListener('click', nextSlide);
+        autoBtn.addEventListener('click', toggleAutoPlay);
+
+        // 键盘控制（PC端）
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': prevSlide(); break;
+                case 'ArrowRight': nextSlide(); break;
+                case ' ': toggleAutoPlay(); e.preventDefault(); break; // 空格暂停
+            }
+        });
+
+        // 触摸滑动控制（移动端）
+        let touchStartX = 0;
+        document.querySelector('.ppt-container').addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+        document.querySelector('.ppt-container').addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diffX = touchEndX - touchStartX;
+            if (diffX > 50) prevSlide(); // 右滑→上一页
+            if (diffX < -50) nextSlide(); // 左滑→下一页
+        });
+
+        // 点击屏幕切换（除控制按钮外）
+        document.querySelector('.ppt-container').addEventListener('click', (e) => {
+            if (!e.target.closest('.btn-group')) nextSlide();
+        });
+
+        // 初始化启动
+        startAutoPlay();
+        updateSlide();
+    </script>
+</body>
+</html>
