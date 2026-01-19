@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绝美风景轮播</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            background-color: #000; /* 黑色背景更凸显图片 */
+        }
+        /* 轮播容器铺满整个屏幕 */
+        .slider-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* 图片样式 - 铺满容器且保持比例 */
+        .slider-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 铺满屏幕，裁剪多余部分，不变形 */
+            opacity: 0;
+            transition: opacity 1.2s ease-in-out; /* 顺滑的淡入淡出效果 */
+        }
+        .slider-img.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container">
+        <!-- 四张图片 - 使用你提供的真实链接，alt为空不显示名称 -->
+        <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/8753723907394bd38f3217602da500d3.jpg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=2026011911140431CC70D009CDFA0A5F7C&rrcfp=dafada99&x-expires=2085016444&x-signature=L9Iez7g6miXmWmzX%2BwCneT0dkKA%3D" 
+             class="slider-img active" alt="">
+        <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/711b413db2a84ad0b48cc93329c2272b.jpg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=2026011911140431CC70D009CDFA0A5F7C&rrcfp=dafada99&x-expires=2085016444&x-signature=OePmRxciAtfmjI6SUUkvynh3aIo%3D" 
+             class="slider-img" alt="">
+        <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/cebddfcf5ea64f0dac182c8a0afff512.jpg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=2026011911140431CC70D009CDFA0A5F7C&rrcfp=dafada99&x-expires=2085016444&x-signature=tn1GVVl3dwDc9boWehGcv%2FN5ObM%3D" 
+             class="slider-img" alt="">
+        <img src="https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/677de932d274463d93efcef60a34e789.jpg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=2026011911140431CC70D009CDFA0A5F7C&rrcfp=dafada99&x-expires=2085016444&x-signature=9REgxftMigrw1HuqJDZmqNb70sg%3D" 
+             class="slider-img" alt="">
+    </div>
+
+    <script>
+        // 获取所有图片元素
+        const images = document.querySelectorAll('.slider-img');
+        let currentIndex = 0;
+        let slideInterval;
+
+        // 自动播放函数 - 核心循环逻辑
+        function startSlide() {
+            slideInterval = setInterval(() => {
+                // 隐藏当前图片
+                images[currentIndex].classList.remove('active');
+                // 切换到下一张，取模实现无限循环（0→1→2→3→0）
+                currentIndex = (currentIndex + 1) % images.length;
+                // 显示下一张图片
+                images[currentIndex].classList.add('active');
+            }, 3000); // 每3秒切换一次，可修改此数值调整播放速度（单位：毫秒）
+        }
+
+        // 页面加载完成后立即启动自动播放
+        window.addEventListener('load', () => {
+            // 确保第一张图片初始显示
+            images[0].classList.add('active');
+            // 启动循环播放
+            startSlide();
+        });
+    </script>
+</body>
+</html>
